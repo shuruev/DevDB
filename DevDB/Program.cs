@@ -1,4 +1,4 @@
-﻿using System;
+﻿using System.Reflection;
 using Atom.Util;
 
 namespace DevDB
@@ -7,8 +7,8 @@ namespace DevDB
     {
         public static void Main(string[] args)
         {
+            XConsole.Yellow.WriteLine($"Version {Assembly.GetExecutingAssembly().GetName().Version}");
             XConsole.OK.WriteLine("Done");
-            Console.ReadKey();
         }
     }
 }

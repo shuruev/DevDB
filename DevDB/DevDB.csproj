@@ -1,12 +1,33 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp3.1</TargetFramework>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>devdb</ToolCommandName>
+    <Version>0.0.1.5</Version>
+    <PackageReleaseNotes>Work in progress.</PackageReleaseNotes>
+    <PackageTags>db, tool, development, version-control, sql, mssql</PackageTags>
+    <Description>.NET tool for putting database under version control.
+
+Install globally or as development dependency to one of your projects, then run as "dotnet devdb -x ..."
+
+Check out GitHub for more docs and usage examples.</Description>
+    <Authors>Oleg Shuruev</Authors>
+    <PackageProjectUrl>https://github.com/shuruev/DevDB</PackageProjectUrl>
+    <PackageIcon>images/icon.png</PackageIcon>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Atom.XConsole" Version="1.2.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\icon.png">
+      <Pack>True</Pack>
+      <PackagePath>images</PackagePath>
+    </None>
   </ItemGroup>
 
 </Project>
