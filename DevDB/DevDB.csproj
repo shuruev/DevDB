@@ -20,7 +20,8 @@ Check out GitHub for more docs and usage examples.</Description>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Atom.XConsole" Version="1.2.0" />
+    <PackageReference Include="Atom.XConsole" Version="1.3.0" />
+    <PackageReference Include="System.Data.SqlClient" Version="4.8.1" />
   </ItemGroup>
 
   <ItemGroup>
