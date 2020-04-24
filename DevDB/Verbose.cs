@@ -6,7 +6,15 @@ namespace DevDB
     {
         public static bool Enabled { get; set; }
 
-        public static void WriteLine(string message)
+        public static void Write(string message = null)
+        {
+            if (!Enabled)
+                return;
+
+            XConsole.Muted.Write(message);
+        }
+
+        public static void WriteLine(string message = null)
         {
             if (!Enabled)
                 return;

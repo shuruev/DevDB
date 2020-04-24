@@ -7,6 +7,7 @@ namespace DevDB.Db
         public string ServerName { get; }
         public string DatabaseName { get; }
 
+        public void CleanLogFiles();
         public void DropAll();
         public void ExecuteScripts(IEnumerable<string> scripts);
 

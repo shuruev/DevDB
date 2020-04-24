@@ -14,6 +14,9 @@ namespace DevDB.Reset
     {
         private readonly RunOptions _options;
 
+        private string _targetPath;
+        private string _logPath;
+
         public ResetDb(RunOptions options)
         {
             _options = options;
@@ -21,6 +24,9 @@ namespace DevDB.Reset
 
         public void Run()
         {
+            if (!InitializeFolders())
+                return;
+
             var engine = GetDbEngine();
 
             if (!Validate(engine))
@@ -30,6 +36,7 @@ namespace DevDB.Reset
                 return;
 
             XConsole.NewPara();
+            engine.CleanLogFiles();
 
             var scripts = BuildScripts();
             if (scripts == null)
@@ -37,32 +44,61 @@ namespace DevDB.Reset
 
             var sw = Stopwatch.StartNew();
 
-            XConsole.Write("Drop all objects... ");
-            engine.DropAll();
-            XConsole.Green.WriteLine("OK");
+            XConsole.NewPara();
+            Execute("Drop all objects...", () => engine.DropAll());
 
             foreach (var script in scripts)
             {
+                Verbose.WriteLine();
                 foreach (var file in script.Files)
                     Verbose.WriteLine($"{script.GroupName}: {file.FileName}");
 
-                XConsole.Write($"Creating {script.GroupName}... ");
-                engine.ExecuteScripts(script.Files.Select(f => f.FileText));
-                XConsole.Green.WriteLine("OK");
+                Execute($"Creating {script.GroupName}...", () => engine.ExecuteScripts(script.Files.Select(f => f.FileText)));
             }
 
             sw.Stop();
-            Verbose.WriteLine($"Database reset took {sw.Elapsed}");
+            Verbose.WriteLine($"Database reset took {sw.ElapsedMilliseconds:N0} ms");
 
             Report(engine);
         }
 
         private IDbEngine GetDbEngine() => _options.DbType switch
         {
-            DbType.Mssql => new MssqlDbEngine((SqlConnectionStringBuilder)_options.Connection),
-            DbType.Pgsql => new PgsqlDbEngine((NpgsqlConnectionStringBuilder)_options.Connection),
+            DbType.Mssql => new MssqlDbEngine((SqlConnectionStringBuilder)_options.Connection, _logPath),
+            DbType.Pgsql => new PgsqlDbEngine((NpgsqlConnectionStringBuilder)_options.Connection, _logPath),
             _ => throw new InvalidOperationException($"DB type {_options.DbType} is not supported yet")
         };
+
+        private bool InitializeFolders()
+        {
+            XConsole.NewPara();
+
+            _targetPath = Environment.CurrentDirectory;
+            if (!String.IsNullOrWhiteSpace(_options.CustomPath))
+                _targetPath = _options.CustomPath;
+
+            if (!Directory.Exists(_targetPath))
+            {
+                XConsole.NewPara().Warning.WriteLine("Cannot locate target path");
+                XConsole.Write("The following target path was not found: ").Cyan.WriteLine(_targetPath);
+                XConsole.Write("When you use ").Yellow.Write("-p").Default.WriteLine(" parameter to specify custom path, make sure it points to existing location");
+                return false;
+            }
+
+            Verbose.WriteLine($"Target path: {_targetPath}");
+
+            _logPath = Path.Combine(_targetPath, "log");
+            Verbose.Write($"Log path: {_logPath}");
+
+            if (!Directory.Exists(_logPath))
+            {
+                Directory.CreateDirectory(_logPath);
+                Verbose.Write(" (created)");
+            }
+
+            Verbose.WriteLine();
+            return true;
+        }
 
         private bool Validate(IDbEngine engine)
         {
@@ -72,7 +108,6 @@ namespace DevDB.Reset
                 XConsole.Write("Use -c to specify connection, e.g. ").Yellow.WriteLine("-c \"Server=localhost; Database=MyDb; Integrated Security=True;\"");
                 return false;
             }
-
 
             if (String.IsNullOrWhiteSpace(engine.ServerName))
             {
@@ -106,6 +141,19 @@ namespace DevDB.Reset
             return key.Key == ConsoleKey.Y;
         }
 
+        private void Execute(string log, Action action)
+        {
+            XConsole.Write($"{log} ");
+
+            var sw = Stopwatch.StartNew();
+            action.Invoke();
+            sw.Stop();
+
+            XConsole.Green.Write("OK");
+            Verbose.Write($" ({sw.ElapsedMilliseconds:N0} ms)");
+            XConsole.WriteLine();
+        }
+
         private void Report(IDbEngine engine)
         {
             var sw = Stopwatch.StartNew();
@@ -114,24 +162,19 @@ namespace DevDB.Reset
             sw.Stop();
 
             XConsole.NewPara().Write("Database ").Cyan.Write(engine.DatabaseName).Default.Write(" at ").Cyan.Write(engine.ServerName).Default.WriteLine(" was successfully reset.");
-            XConsole.Write("Now it has ").Yellow.Write($"{tables}").Default.Write(" tables and ").Yellow.Write($"{procedures}").Default.WriteLine(" procedures in case you ever wondered.");
-            Verbose.WriteLine($"Getting stats took {sw.Elapsed}");
+            XConsole.Write("Now it has ").Yellow.Write($"{tables}").Default.Write(" tables and ").Yellow.Write($"{procedures}").Default.WriteLine(" procedures (in case you ever wondered)");
+            Verbose.WriteLine($"Getting stats took {sw.ElapsedMilliseconds:N0} ms");
         }
 
         private List<ResetScript> BuildScripts()
         {
-            var path = Environment.CurrentDirectory;
-            if (!String.IsNullOrWhiteSpace(_options.CustomPath))
-                path = _options.CustomPath;
-
-            Verbose.WriteLine($"Target path: {path}");
             Verbose.WriteLine("Locating script files...");
 
-            var files = Directory.GetFiles(path, "*.sql", SearchOption.AllDirectories);
+            var files = Directory.GetFiles(_targetPath, "*.sql", SearchOption.AllDirectories);
             Verbose.WriteLine($"{files.Length} files found");
 
             var scripts = files
-                .GroupBy(f => GetScriptGroupName(f, path))
+                .GroupBy(f => GetScriptGroupName(f, _targetPath))
                 .Select(g => new ResetScript
                 {
                     GroupName = g.Key,
@@ -148,7 +191,7 @@ namespace DevDB.Reset
             if (scripts.Count == 0)
             {
                 XConsole.NewPara().Warning.WriteLine("No SQL scripts found");
-                XConsole.Write("No SQL scripts could be found at ").Cyan.WriteLine(path);
+                XConsole.Write("No SQL scripts could be found at ").Cyan.WriteLine(_targetPath);
                 XConsole.WriteLine("If this was not intended to be using current path, use -p to specify custom path");
                 XConsole.Write("e.g. ").Yellow.WriteLine("-p \"C:\\MyRepos\\MyProject\\database\"");
                 return null;

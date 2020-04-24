@@ -32,4 +32,8 @@ Check out GitHub for more docs and usage examples.</Description>
     </None>
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="Scripts\**\*.sql" />
+  </ItemGroup>
+
 </Project>
