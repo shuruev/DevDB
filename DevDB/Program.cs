@@ -8,6 +8,7 @@ using System.Reflection;
 using Atom.Util;
 using DevDB.Migrate;
 using DevDB.Reset;
+using Npgsql;
 
 namespace DevDB
 {
@@ -51,7 +52,7 @@ namespace DevDB
             {
                 XConsole.NewPara().Error.WriteLine(e.Message);
                 XConsole.Red.WriteLine(e.ToString());
-                XConsole.PressAnyKeyWhenDebug();
+                XConsole.PressAnyKey();
                 return -1;
             }
 
@@ -170,6 +171,9 @@ namespace DevDB
                 case DbType.Mssql:
                     return ParseMssqlConnection(arg);
 
+                case DbType.Pgsql:
+                    return ParsePgsqlConnection(arg);
+
                 default:
                     throw new InvalidOperationException($"DB type {type} is not supported yet");
             }
@@ -183,7 +187,20 @@ namespace DevDB
             }
             catch
             {
-                XConsole.Warning.Write("Invalid MSSQL connection string:").Default.WriteLine($" {arg}");
+                XConsole.Warning.Write("Invalid SQL Server connection string:").Default.WriteLine($" {arg}");
+                throw;
+            }
+        }
+
+        private static NpgsqlConnectionStringBuilder ParsePgsqlConnection(string arg)
+        {
+            try
+            {
+                return new NpgsqlConnectionStringBuilder(arg);
+            }
+            catch
+            {
+                XConsole.Warning.Write("Invalid PostgreSQL connection string:").Default.WriteLine($" {arg}");
                 throw;
             }
         }

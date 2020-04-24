@@ -1,13 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using Atom.Util;
+using DevDB.Db;
+using Npgsql;
 
 namespace DevDB.Reset
 {
-    public partial class ResetDb
+    public class ResetDb
     {
         private readonly RunOptions _options;
 
@@ -18,60 +21,101 @@ namespace DevDB.Reset
 
         public void Run()
         {
-            switch (_options.DbType)
-            {
-                case DbType.Mssql:
-                    RunMssql();
-                    break;
+            var engine = GetDbEngine();
 
-                default:
-                    throw new InvalidOperationException($"DB type {_options.DbType} is not supported yet");
-            }
-        }
+            if (!Validate(engine))
+                return;
 
-        private void RunMssql()
-        {
+            if (!Prompt(engine))
+                return;
+
             XConsole.NewPara();
 
+            var scripts = BuildScripts();
+            if (scripts == null)
+                return;
+
+            var sw = Stopwatch.StartNew();
+
+            XConsole.Write("Drop all objects... ");
+            engine.DropAll();
+            XConsole.Green.WriteLine("OK");
+
+            foreach (var script in scripts)
+            {
+                foreach (var file in script.Files)
+                    Verbose.WriteLine($"{script.GroupName}: {file.FileName}");
+
+                XConsole.Write($"Creating {script.GroupName}... ");
+                engine.ExecuteScripts(script.Files.Select(f => f.FileText));
+                XConsole.Green.WriteLine("OK");
+            }
+
+            sw.Stop();
+            Verbose.WriteLine($"Database reset took {sw.Elapsed}");
+
+            Report(engine);
+        }
+
+        private IDbEngine GetDbEngine() => _options.DbType switch
+        {
+            DbType.Mssql => new MssqlDbEngine((SqlConnectionStringBuilder)_options.Connection),
+            DbType.Pgsql => new PgsqlDbEngine((NpgsqlConnectionStringBuilder)_options.Connection),
+            _ => throw new InvalidOperationException($"DB type {_options.DbType} is not supported yet")
+        };
+
+        private bool Validate(IDbEngine engine)
+        {
             if (_options.Connection == null)
             {
-                XConsole.Warning.WriteLine("Connection is not set");
+                XConsole.NewPara().Warning.WriteLine("Connection is not set");
                 XConsole.Write("Use -c to specify connection, e.g. ").Yellow.WriteLine("-c \"Server=localhost; Database=MyDb; Integrated Security=True;\"");
-                return;
+                return false;
             }
 
-            var csb = (SqlConnectionStringBuilder)_options.Connection;
 
-            if (String.IsNullOrWhiteSpace(csb.DataSource))
+            if (String.IsNullOrWhiteSpace(engine.ServerName))
             {
-                XConsole.Warning.WriteLine("DB server is not set");
-                XConsole.Write("Specify Server or Data Source location in your connection, e.g. -c \"").Yellow.Write("Server=localhost;").Default.Write(" Database=MyDb; ...\"");
-                return;
+                XConsole.NewPara().Warning.WriteLine("DB server is not set");
+                XConsole.Write("Specify 'Server' in your connection, e.g. -c \"").Yellow.Write("Server=localhost;").Default.Write(" Database=MyDb; ...\"");
+                return false;
             }
 
-            if (String.IsNullOrWhiteSpace(csb.InitialCatalog))
+            if (String.IsNullOrWhiteSpace(engine.DatabaseName))
             {
-                XConsole.Warning.WriteLine("DB name is not set");
-                XConsole.Write("Specify Database or Initial Catalog name in your connection, e.g. -c \"Server=localhost; ").Yellow.Write("Database=MyDb;").Default.Write(" ...\"");
-                return;
+                XConsole.NewPara().Warning.WriteLine("DB name is not set");
+                XConsole.Write("Specify 'Database' in your connection, e.g. -c \"Server=localhost; ").Yellow.Write("Database=MyDb;").Default.Write(" ...\"");
+                return false;
             }
 
-            XConsole.Write("Performing reset for ").Cyan.Write(csb.InitialCatalog).Default.Write(" database at ").Cyan.WriteLine(csb.DataSource);
+            return true;
+        }
+
+        private bool Prompt(IDbEngine engine)
+        {
+            XConsole.NewPara().Write("Performing reset for ").Cyan.Write(engine.DatabaseName).Default.Write(" database at ").Cyan.WriteLine(engine.ServerName);
             XConsole.Write("This will ").Error.Write("*** ERASE ***").Default.Write(" your local DB and recreate it from scripts. You sure (Y/N)? ");
 
             if (_options.AlwaysYes)
             {
                 Console.Write('y');
-            }
-            else
-            {
-                var key = Console.ReadKey();
-                if (key.Key != ConsoleKey.Y)
-                    return;
+                return true;
             }
 
-            XConsole.NewPara();
-            MssqlRunReset();
+            var key = Console.ReadKey();
+            return key.Key == ConsoleKey.Y;
+        }
+
+        private void Report(IDbEngine engine)
+        {
+            var sw = Stopwatch.StartNew();
+            var tables = engine.GetTableCount();
+            var procedures = engine.GetProcedureCount();
+            sw.Stop();
+
+            XConsole.NewPara().Write("Database ").Cyan.Write(engine.DatabaseName).Default.Write(" at ").Cyan.Write(engine.ServerName).Default.WriteLine(" was successfully reset.");
+            XConsole.Write("Now it has ").Yellow.Write($"{tables}").Default.Write(" tables and ").Yellow.Write($"{procedures}").Default.WriteLine(" procedures in case you ever wondered.");
+            Verbose.WriteLine($"Getting stats took {sw.Elapsed}");
         }
 
         private List<ResetScript> BuildScripts()
