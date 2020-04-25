@@ -11,7 +11,8 @@ namespace DevDB.Reset
 
     public class ResetScriptFile
     {
-        public string FileName { get; set; }
+        public string FullPath { get; set; }
+        public string BasePath { get; set; }
         public string FileText { get; set; }
     }
 }

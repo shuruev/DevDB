@@ -12,6 +12,8 @@ namespace DevDB.Reset
 {
     public class ResetDb
     {
+        private const int UPDATE_EVERY_DAYS = 5;
+
         private readonly RunOptions _options;
 
         private string _targetPath;
@@ -50,7 +52,7 @@ namespace DevDB.Reset
             {
                 Verbose.WriteLine();
                 foreach (var file in script.Files)
-                    Verbose.WriteLine($"{script.CategoryName.ToUpper()} : {file.FileName}");
+                    Verbose.WriteLine($"{script.CategoryName.ToUpper()} : {file.BasePath}");
 
                 Execute($"Creating {script.CategoryName.ToLower()}...", () => engine.ExecuteCreation(script));
             }
@@ -118,7 +120,7 @@ namespace DevDB.Reset
             if (File.Exists(updated))
             {
                 var updatedTime = File.GetCreationTimeUtc(updated);
-                if (DateTime.UtcNow.Subtract(updatedTime).TotalMinutes > 5)
+                if (DateTime.UtcNow.Subtract(updatedTime).TotalDays > UPDATE_EVERY_DAYS)
                 {
                     File.Delete(updated);
                     Verbose.WriteLine("Need to check for updates, use updated.txt to detect");
@@ -166,7 +168,9 @@ namespace DevDB.Reset
             }
 
             var key = Console.ReadKey();
-            return key.Key == ConsoleKey.Y;
+            return key.Key == ConsoleKey.Y
+                || key.Key == ConsoleKey.D1
+                || key.Key == ConsoleKey.NumPad1;
         }
 
         private void Execute(string log, Action action)
@@ -201,23 +205,44 @@ namespace DevDB.Reset
             var files = Directory.GetFiles(_targetPath, "*.sql", SearchOption.AllDirectories);
             Verbose.WriteLine($"Found {files.Length} *.sql files");
 
-            var scripts = files
+            // filter out SQL scripts to use
+            var all = files
                 .GroupBy(f => GetScriptGroupName(f, _targetPath))
-                .Where(g => g.Key != null)
                 .Select(g => new ResetScript
                 {
                     CategoryName = g.Key,
                     Files = g
                         .Select(f => new ResetScriptFile
                         {
-                            FileName = f,
+                            FullPath = f,
+                            BasePath = Path.GetRelativePath(_targetPath, f),
                             FileText = File.ReadAllText(f)
                         })
-                        .OrderBy(f => f.FileName)
+                        .OrderBy(f => f.FullPath)
                         .ToList()
                 })
+                .ToList();
+
+            var scripts = all
+                .Where(i => i.CategoryName != null)
                 .OrderBy(s => KnownScripts.GetCategoryOrder(s.CategoryName))
                 .ToList();
+
+            for (var i = 0; i < scripts.Count; i++)
+            {
+                scripts[i].ExecutionOrder = i + 1;
+            }
+
+            // display ignored files
+            var ignored = all.FirstOrDefault(i => i.CategoryName == null)?.Files;
+            if (ignored.Count > 0)
+            {
+                Verbose.WriteLine($"Ignored {ignored.Count} files:");
+                foreach (var item in ignored)
+                {
+                    Verbose.WriteLine($"- {item.BasePath}");
+                }
+            }
 
             if (scripts.Count == 0)
             {
@@ -226,11 +251,6 @@ namespace DevDB.Reset
                 XConsole.WriteLine("If this was not intended to be using current path, use -p to specify custom path");
                 XConsole.Write("e.g. ").Yellow.WriteLine("-p \"C:\\MyRepos\\MyProject\\database\"");
                 return null;
-            }
-
-            for (var i = 0; i < scripts.Count; i++)
-            {
-                scripts[i].ExecutionOrder = i + 1;
             }
 
             Verbose.WriteLine($"Filtered out {scripts.Sum(s => s.Files.Count)} scripts to run, in {scripts.Count} categories");

@@ -32,7 +32,7 @@ namespace DevDB.Db
             foreach (var file in script.Files)
             {
                 sb.AppendLine($@"--------------------------------------------------
--- {file.FileName}
+-- {file.BasePath}
 --------------------------------------------------");
 
                 sb.AppendLine(file.FileText);
