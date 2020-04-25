@@ -5,12 +5,12 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>devdb</ToolCommandName>
-    <Version>0.0.3</Version>
-    <PackageReleaseNotes>Work in progress.</PackageReleaseNotes>
+    <Version>0.1.1</Version>
+    <PackageReleaseNotes>Added primitive check for updates mechanism.</PackageReleaseNotes>
     <PackageTags>db, tool, development, version-control, sql, mssql</PackageTags>
     <Description>.NET tool for putting database under version control.
 
-Install globally or as development dependency to one of your projects, then run as "devdb -x ..."
+Install globally or as development dependency to one of your projects, then run as "devdb reset -c ..."
 
 Check out GitHub for more docs and usage examples.</Description>
     <Authors>Oleg Shuruev</Authors>

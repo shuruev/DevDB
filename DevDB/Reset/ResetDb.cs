@@ -73,6 +73,7 @@ namespace DevDB.Reset
         {
             XConsole.NewPara();
 
+            // choose target path
             _targetPath = Environment.CurrentDirectory;
             if (!String.IsNullOrWhiteSpace(_options.CustomPath))
                 _targetPath = _options.CustomPath;
@@ -87,6 +88,7 @@ namespace DevDB.Reset
 
             Verbose.WriteLine($"Target path: {_targetPath}");
 
+            // get log path
             _logPath = Path.Combine(_targetPath, "log");
             Verbose.Write($"Log path: {_logPath}");
 
@@ -98,7 +100,11 @@ namespace DevDB.Reset
 
             Verbose.WriteLine();
 
-            var existing = Directory.GetFiles(_logPath, "*.*");
+            // clean log files
+            var existing = Directory.GetFiles(_logPath, "*.*")
+                .Where(f => Path.GetFileName(f) != "updated.txt")
+                .ToArray();
+
             foreach (var file in existing)
             {
                 File.Delete(file);
@@ -106,6 +112,18 @@ namespace DevDB.Reset
 
             if (existing.Length > 0)
                 Verbose.WriteLine($"Deleted {existing.Length} log files");
+
+            // check for updates
+            var updated = Path.Combine(_logPath, "updated.txt");
+            if (File.Exists(updated))
+            {
+                var updatedTime = File.GetCreationTimeUtc(updated);
+                if (DateTime.UtcNow.Subtract(updatedTime).TotalMinutes > 5)
+                {
+                    File.Delete(updated);
+                    Verbose.WriteLine("Need to check for updates, use updated.txt to detect");
+                }
+            }
 
             return true;
         }
