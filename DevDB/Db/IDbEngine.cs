@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+﻿using DevDB.Reset;
 
 namespace DevDB.Db
 {
@@ -7,9 +7,8 @@ namespace DevDB.Db
         public string ServerName { get; }
         public string DatabaseName { get; }
 
-        public void CleanLogFiles();
         public void DropAll();
-        public void ExecuteScripts(IEnumerable<string> scripts);
+        public void ExecuteCreation(ResetScript script);
 
         public int GetTableCount();
         public int GetProcedureCount();

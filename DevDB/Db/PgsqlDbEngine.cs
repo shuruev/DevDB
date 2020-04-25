@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
+using DevDB.Reset;
 using Npgsql;
 
 namespace DevDB.Db
@@ -21,17 +21,12 @@ namespace DevDB.Db
         public string ServerName => _connectionString.Host;
         public string DatabaseName => _connectionString.Database;
 
-        public void CleanLogFiles()
-        {
-            throw new NotImplementedException();
-        }
-
         public void DropAll()
         {
             throw new NotImplementedException();
         }
 
-        public void ExecuteScripts(IEnumerable<string> scripts)
+        public void ExecuteCreation(ResetScript script)
         {
             throw new NotImplementedException();
         }

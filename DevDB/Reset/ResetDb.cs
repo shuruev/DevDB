@@ -36,7 +36,6 @@ namespace DevDB.Reset
                 return;
 
             XConsole.NewPara();
-            engine.CleanLogFiles();
 
             var scripts = BuildScripts();
             if (scripts == null)
@@ -51,12 +50,13 @@ namespace DevDB.Reset
             {
                 Verbose.WriteLine();
                 foreach (var file in script.Files)
-                    Verbose.WriteLine($"{script.GroupName}: {file.FileName}");
+                    Verbose.WriteLine($"{script.CategoryName.ToUpper()} : {file.FileName}");
 
-                Execute($"Creating {script.GroupName}...", () => engine.ExecuteScripts(script.Files.Select(f => f.FileText)));
+                Execute($"Creating {script.CategoryName.ToLower()}...", () => engine.ExecuteCreation(script));
             }
 
             sw.Stop();
+            Verbose.WriteLine();
             Verbose.WriteLine($"Database reset took {sw.ElapsedMilliseconds:N0} ms");
 
             Report(engine);
@@ -97,6 +97,16 @@ namespace DevDB.Reset
             }
 
             Verbose.WriteLine();
+
+            var existing = Directory.GetFiles(_logPath, "*.*");
+            foreach (var file in existing)
+            {
+                File.Delete(file);
+            }
+
+            if (existing.Length > 0)
+                Verbose.WriteLine($"Deleted {existing.Length} log files");
+
             return true;
         }
 
@@ -171,21 +181,24 @@ namespace DevDB.Reset
             Verbose.WriteLine("Locating script files...");
 
             var files = Directory.GetFiles(_targetPath, "*.sql", SearchOption.AllDirectories);
-            Verbose.WriteLine($"{files.Length} files found");
+            Verbose.WriteLine($"Found {files.Length} *.sql files");
 
             var scripts = files
                 .GroupBy(f => GetScriptGroupName(f, _targetPath))
+                .Where(g => g.Key != null)
                 .Select(g => new ResetScript
                 {
-                    GroupName = g.Key,
+                    CategoryName = g.Key,
                     Files = g
                         .Select(f => new ResetScriptFile
                         {
                             FileName = f,
                             FileText = File.ReadAllText(f)
                         })
+                        .OrderBy(f => f.FileName)
                         .ToList()
                 })
+                .OrderBy(s => KnownScripts.GetCategoryOrder(s.CategoryName))
                 .ToList();
 
             if (scripts.Count == 0)
@@ -197,6 +210,12 @@ namespace DevDB.Reset
                 return null;
             }
 
+            for (var i = 0; i < scripts.Count; i++)
+            {
+                scripts[i].ExecutionOrder = i + 1;
+            }
+
+            Verbose.WriteLine($"Filtered out {scripts.Sum(s => s.Files.Count)} scripts to run, in {scripts.Count} categories");
             return scripts;
         }
 
@@ -204,11 +223,8 @@ namespace DevDB.Reset
         {
             var file = Path.GetRelativePath(basePath, fileName);
 
-            var parts = file.Split('_', '-', '/', '\\');
-            if (parts.Length == 1)
-                return "Other";
-
-            return parts[0];
+            var parts = file.Split('_', '-', '/', '\\', '.');
+            return KnownScripts.Categorize(parts[0]);
         }
     }
 }

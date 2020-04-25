@@ -4,7 +4,8 @@ namespace DevDB.Reset
 {
     public class ResetScript
     {
-        public string GroupName { get; set; }
+        public string CategoryName { get; set; }
+        public int ExecutionOrder { get; set; }
         public List<ResetScriptFile> Files { get; set; }
     }
 

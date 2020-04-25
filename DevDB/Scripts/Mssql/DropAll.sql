@@ -191,3 +191,63 @@ BEGIN
 
 	EXECUTE sp_executesql @sql
 END
+
+--------------------------------------------------
+-- Drop all users, except system ones (like e.g. dbo, sys, INFORMATION_SCHEMA, guest etc.)
+--------------------------------------------------
+WHILE EXISTS (
+	SELECT *
+	FROM sysusers U
+	WHERE
+		U.issqluser = 1
+		AND U.[sid] NOT IN (0, 1)
+)
+BEGIN
+	SELECT TOP 1 @sql = 'DROP USER [' + U.[name] + ']'
+	FROM sysusers U
+	WHERE
+		U.issqluser = 1
+		AND U.[sid] NOT IN (0, 1)
+
+	EXECUTE sp_executesql @sql
+END
+
+--------------------------------------------------
+-- Drop all user-defined roles (i.e. will not delete public, db_owner, db_datareader etc.)
+--------------------------------------------------
+WHILE EXISTS (
+	SELECT *
+	FROM sysusers U
+	WHERE
+		U.issqlrole = 1
+		AND U.[uid] > 0
+		AND U.[uid] < 16384
+)
+BEGIN
+	SELECT TOP 1 @sql = 'DROP ROLE [' + U.[name] + ']'
+	FROM sysusers U
+	WHERE
+		U.issqlrole = 1
+		AND U.[uid] > 0
+		AND U.[uid] < 16384
+
+	EXECUTE sp_executesql @sql
+END
+
+--------------------------------------------------
+-- Drop all user-defined app roles
+--------------------------------------------------
+WHILE EXISTS (
+	SELECT *
+	FROM sysusers U
+	WHERE
+		U.isapprole = 1
+)
+BEGIN
+	SELECT TOP 1 @sql = 'DROP APPLICATION ROLE [' + U.[name] + ']'
+	FROM sysusers U
+	WHERE
+		U.isapprole = 1
+
+	EXECUTE sp_executesql @sql
+END

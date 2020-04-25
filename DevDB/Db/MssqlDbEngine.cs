@@ -1,6 +1,7 @@
-﻿using System.Collections.Generic;
-using System.Data.SqlClient;
+﻿using System.Data.SqlClient;
 using System.IO;
+using System.Text;
+using DevDB.Reset;
 
 namespace DevDB.Db
 {
@@ -21,24 +22,23 @@ namespace DevDB.Db
         public string ServerName => _connectionString.DataSource;
         public string DatabaseName => _connectionString.InitialCatalog;
 
-        public void CleanLogFiles()
+        public void DropAll() => ExecuteAndLog("Drop_All.sql", Scripts.Mssql.DropAll);
+
+        public void ExecuteCreation(ResetScript script)
         {
-            DeleteLogFileIfExists("DropAll.sql");
-        }
+            var sb = new StringBuilder();
+            foreach (var file in script.Files)
+            {
+                sb.AppendLine($@"--------------------------------------------------
+-- {file.FileName}
+--------------------------------------------------");
 
-        private void DeleteLogFileIfExists(string logFile)
-        {
-            var filePath = Path.Combine(_logPath, logFile);
-            if (!File.Exists(filePath))
-                return;
+                sb.AppendLine(file.FileText);
+                sb.AppendLine("GO");
+                sb.AppendLine();
+            }
 
-            File.Delete(filePath);
-        }
-
-        public void DropAll() => ExecuteAndLog("DropAll.sql", Scripts.Mssql.DropAll);
-
-        public void ExecuteScripts(IEnumerable<string> scripts)
-        {
+            ExecuteAndLog($"Create_{script.ExecutionOrder:d2}_{script.CategoryName}.sql", sb.ToString());
         }
 
         private void ExecuteAndLog(string fileName, string sqlScript)
