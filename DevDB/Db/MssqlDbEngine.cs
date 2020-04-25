@@ -26,6 +26,8 @@ namespace DevDB.Db
 
         public void ExecuteCreation(ResetScript script)
         {
+            var all = Path.Combine(_logPath, "Create_All.sql");
+
             var sb = new StringBuilder();
             foreach (var file in script.Files)
             {
@@ -38,6 +40,7 @@ namespace DevDB.Db
                 sb.AppendLine();
             }
 
+            File.AppendAllText(all, sb.ToString());
             ExecuteAndLog($"Create_{script.ExecutionOrder:d2}_{script.CategoryName}.sql", sb.ToString());
         }
 
