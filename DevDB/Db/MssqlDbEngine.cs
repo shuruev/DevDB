@@ -1,5 +1,7 @@
-﻿using System.Data.SqlClient;
+﻿using System.Collections.Generic;
+using System.Data.SqlClient;
 using System.IO;
+using System.Linq;
 using System.Text;
 using DevDB.Reset;
 
@@ -21,6 +23,14 @@ namespace DevDB.Db
 
         public string ServerName => _connectionString.DataSource;
         public string DatabaseName => _connectionString.InitialCatalog;
+
+        public List<string> GetLogFilesToClean()
+        {
+            return Directory.GetFiles(_logPath, "*.sql")
+                .Where(f => Path.GetFileName(f).StartsWith("Drop_"))
+                .Where(f => Path.GetFileName(f).StartsWith("Create_"))
+                .ToList();
+        }
 
         public void DropAll() => ExecuteAndLog("Drop_All.sql", Scripts.Mssql.DropAll);
 

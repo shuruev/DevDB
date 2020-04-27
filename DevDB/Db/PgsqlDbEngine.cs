@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using DevDB.Reset;
 using Npgsql;
 
@@ -20,6 +21,11 @@ namespace DevDB.Db
 
         public string ServerName => _connectionString.Host;
         public string DatabaseName => _connectionString.Database;
+
+        public List<string> GetLogFilesToClean()
+        {
+            throw new NotImplementedException();
+        }
 
         public void DropAll()
         {

@@ -12,21 +12,16 @@ namespace DevDB.Reset
 {
     public class ResetDb
     {
-        private const int UPDATE_EVERY_DAYS = 5;
+        private readonly RunContext _context;
 
-        private readonly RunOptions _options;
-
-        private string _targetPath;
-        private string _logPath;
-
-        public ResetDb(RunOptions options)
+        public ResetDb(RunContext context)
         {
-            _options = options;
+            _context = context;
         }
 
         public void Run()
         {
-            if (!InitializeFolders())
+            if (!Validate())
                 return;
 
             var engine = GetDbEngine();
@@ -34,10 +29,12 @@ namespace DevDB.Reset
             if (!Validate(engine))
                 return;
 
-            if (!Prompt(engine))
+            if (!Proceed(engine))
                 return;
 
+            // prepare scripts
             XConsole.NewPara();
+            CleanLogFiles(engine);
 
             var scripts = BuildScripts();
             if (scripts == null)
@@ -45,6 +42,7 @@ namespace DevDB.Reset
 
             var sw = Stopwatch.StartNew();
 
+            // run scripts
             XConsole.NewPara();
             Execute("Drop all objects...", () => engine.DropAll());
 
@@ -64,116 +62,57 @@ namespace DevDB.Reset
             Report(engine);
         }
 
-        private IDbEngine GetDbEngine() => _options.DbType switch
+        private IDbEngine GetDbEngine() => _context.DbType switch
         {
-            DbType.Mssql => new MssqlDbEngine((SqlConnectionStringBuilder)_options.Connection, _logPath),
-            DbType.Pgsql => new PgsqlDbEngine((NpgsqlConnectionStringBuilder)_options.Connection, _logPath),
-            _ => throw new InvalidOperationException($"DB type {_options.DbType} is not supported yet")
+            DbType.Mssql => new MssqlDbEngine((SqlConnectionStringBuilder)_context.Connection, _context.LogPath),
+            DbType.Pgsql => new PgsqlDbEngine((NpgsqlConnectionStringBuilder)_context.Connection, _context.LogPath),
+            _ => throw new InvalidOperationException($"DB type {_context.DbType} is not supported yet")
         };
 
-        private bool InitializeFolders()
+        private bool Validate()
         {
-            XConsole.NewPara();
-
-            // choose target path
-            _targetPath = Environment.CurrentDirectory;
-            if (!String.IsNullOrWhiteSpace(_options.CustomPath))
-                _targetPath = _options.CustomPath;
-
-            if (!Directory.Exists(_targetPath))
+            if (_context.Connection == null)
             {
-                XConsole.NewPara().Warning.WriteLine("Cannot locate target path");
-                XConsole.Write("The following target path was not found: ").Cyan.WriteLine(_targetPath);
-                XConsole.Write("When you use ").Yellow.Write("-p").Default.WriteLine(" parameter to specify custom path, make sure it points to existing location");
+                XConsole.NewPara().Warning.WriteLine("Connection is not set");
+                XConsole.Write("Specify connection after 'reset' command, e.g. ").Yellow.WriteLine("reset \"Server=localhost; Database=MyDb; Integrated Security=True;\"");
                 return false;
-            }
-
-            Verbose.WriteLine($"Target path: {_targetPath}");
-
-            // get log path
-            _logPath = Path.Combine(_targetPath, "log");
-            Verbose.Write($"Log path: {_logPath}");
-
-            if (!Directory.Exists(_logPath))
-            {
-                Directory.CreateDirectory(_logPath);
-                Verbose.Write(" (created)");
-            }
-
-            Verbose.WriteLine();
-
-            // clean log files
-            var existing = Directory.GetFiles(_logPath, "*.*")
-                .Where(f => Path.GetFileName(f) != "updated.txt")
-                .ToArray();
-
-            foreach (var file in existing)
-            {
-                File.Delete(file);
-            }
-
-            if (existing.Length > 0)
-                Verbose.WriteLine($"Deleted {existing.Length} log files");
-
-            // check for updates
-            var updated = Path.Combine(_logPath, "updated.txt");
-            if (File.Exists(updated))
-            {
-                var updatedTime = File.GetCreationTimeUtc(updated);
-                if (DateTime.UtcNow.Subtract(updatedTime).TotalDays > UPDATE_EVERY_DAYS)
-                {
-                    File.Delete(updated);
-                    Verbose.WriteLine("Need to check for updates, use updated.txt to detect");
-                }
             }
 
             return true;
         }
 
-        private bool Validate(IDbEngine engine)
+        private static bool Validate(IDbEngine engine)
         {
-            if (_options.Connection == null)
-            {
-                XConsole.NewPara().Warning.WriteLine("Connection is not set");
-                XConsole.Write("Use -c to specify connection, e.g. ").Yellow.WriteLine("-c \"Server=localhost; Database=MyDb; Integrated Security=True;\"");
-                return false;
-            }
-
             if (String.IsNullOrWhiteSpace(engine.ServerName))
             {
                 XConsole.NewPara().Warning.WriteLine("DB server is not set");
-                XConsole.Write("Specify 'Server' in your connection, e.g. -c \"").Yellow.Write("Server=localhost;").Default.Write(" Database=MyDb; ...\"");
+                XConsole.Write("Specify 'Server' in your connection, e.g. \"").Yellow.Write("Server=localhost;").Default.Write(" Database=MyDb; ...\"");
                 return false;
             }
 
             if (String.IsNullOrWhiteSpace(engine.DatabaseName))
             {
                 XConsole.NewPara().Warning.WriteLine("DB name is not set");
-                XConsole.Write("Specify 'Database' in your connection, e.g. -c \"Server=localhost; ").Yellow.Write("Database=MyDb;").Default.Write(" ...\"");
+                XConsole.Write("Specify 'Database' in your connection, e.g. \"Server=localhost; ").Yellow.Write("Database=MyDb;").Default.Write(" ...\"");
                 return false;
             }
 
             return true;
         }
 
-        private bool Prompt(IDbEngine engine)
+        private static bool Proceed(IDbEngine engine)
         {
             XConsole.NewPara().Write("Performing reset for ").Cyan.Write(engine.DatabaseName).Default.Write(" database at ").Cyan.WriteLine(engine.ServerName);
             XConsole.Write("This will ").Error.Write("*** ERASE ***").Default.Write(" your local DB and recreate it from scripts. You sure (Y/N)? ");
 
-            if (_options.AlwaysYes)
-            {
-                Console.Write('y');
-                return true;
-            }
+            var proceed = Prompt.YesNo();
+            if (!proceed)
+                XConsole.NewPara().WriteLine("Reset aborted, exiting...");
 
-            var key = Console.ReadKey();
-            return key.Key == ConsoleKey.Y
-                || key.Key == ConsoleKey.D1
-                || key.Key == ConsoleKey.NumPad1;
+            return proceed;
         }
 
-        private void Execute(string log, Action action)
+        private static void Execute(string log, Action action)
         {
             XConsole.Write($"{log} ");
 
@@ -186,7 +125,7 @@ namespace DevDB.Reset
             XConsole.WriteLine();
         }
 
-        private void Report(IDbEngine engine)
+        private static void Report(IDbEngine engine)
         {
             var sw = Stopwatch.StartNew();
             var tables = engine.GetTableCount();
@@ -198,16 +137,29 @@ namespace DevDB.Reset
             Verbose.WriteLine($"Getting stats took {sw.ElapsedMilliseconds:N0} ms");
         }
 
+        private static void CleanLogFiles(IDbEngine engine)
+        {
+            var existing = engine.GetLogFilesToClean();
+
+            foreach (var file in existing)
+            {
+                File.Delete(file);
+            }
+
+            if (existing.Count > 0)
+                Verbose.WriteLine($"Deleted {existing.Count} log files");
+        }
+
         private List<ResetScript> BuildScripts()
         {
             Verbose.WriteLine("Locating script files...");
 
-            var files = Directory.GetFiles(_targetPath, "*.sql", SearchOption.AllDirectories);
+            var files = Directory.GetFiles(_context.TargetPath, "*.sql", SearchOption.AllDirectories);
             Verbose.WriteLine($"Found {files.Length} *.sql files");
 
             // filter out SQL scripts to use
             var all = files
-                .GroupBy(f => GetScriptGroupName(f, _targetPath))
+                .GroupBy(f => GetScriptGroupName(f, _context.TargetPath))
                 .Select(g => new ResetScript
                 {
                     CategoryName = g.Key,
@@ -215,7 +167,7 @@ namespace DevDB.Reset
                         .Select(f => new ResetScriptFile
                         {
                             FullPath = f,
-                            BasePath = Path.GetRelativePath(_targetPath, f),
+                            BasePath = Path.GetRelativePath(_context.TargetPath, f),
                             FileText = File.ReadAllText(f)
                         })
                         .OrderBy(f => f.FullPath)
@@ -247,7 +199,7 @@ namespace DevDB.Reset
             if (scripts.Count == 0)
             {
                 XConsole.NewPara().Warning.WriteLine("No SQL scripts found");
-                XConsole.Write("No SQL scripts could be found at ").Cyan.WriteLine(_targetPath);
+                XConsole.Write("No SQL scripts could be found at ").Cyan.WriteLine(_context.TargetPath);
                 XConsole.WriteLine("If this was not intended to be using current path, use -p to specify custom path");
                 XConsole.Write("e.g. ").Yellow.WriteLine("-p \"C:\\MyRepos\\MyProject\\database\"");
                 return null;

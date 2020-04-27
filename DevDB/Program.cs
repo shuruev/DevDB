@@ -19,32 +19,43 @@ namespace DevDB
             XConsole.NewLine()
                 .Graphite.Write(" DevDB ")
                 .Default.Write(" version ")
-                .Green.WriteLine(GetVersion())
-                .NewPara();
+                .Green.WriteLine(GetVersion());
 
             try
             {
+                XConsole.NewPara();
                 var run = ParseArguments(args);
                 if (run == null)
                 {
                     XConsole.WriteLine("Usage:")
-                        .Write("  devdb ").Yellow.Write("reset").Default.WriteLine(" <options>     Resets specified DB and recreates it from scripts")
-                        .Write("  devdb ").Yellow.Write("migrate").Default.WriteLine(" <options>   Applies all available migrations to specified DB");
+                        .Write("  devdb ").Yellow.Write("reset").Default.WriteLine(" <CONNECTION_STRING> [options]     Resets specified DB and recreates it from scripts")
+                        .Write("  devdb ").Yellow.Write("migrate").Default.WriteLine(" <CONNECTION_STRING> [options]   Applies all available migrations to specified DB");
+
+                    XConsole.NewPara().WriteLine("Options:")
+                        .WriteLine("  -db <DB_TYPE>      Specifies DB engine type: 'mssql' or 'pgsql' (default is 'mssql')")
+                        .WriteLine("  -p <TARGET_PATH>   Specifies custom target path (current folder will be used by default)")
+                        .WriteLine("  -y                 Automatically submits 'yes' to all Y/N prompts")
+                        .WriteLine("  -v                 Enables verbose output");
                 }
                 else
                 {
-                    switch (run.Command)
+                    XConsole.NewPara();
+                    var ctx = InitializeContext(run);
+                    if (ctx != null)
                     {
-                        case RunCommand.Reset:
-                            new ResetDb(run.Options).Run();
-                            break;
+                        switch (run.Command)
+                        {
+                            case RunCommand.Reset:
+                                new ResetDb(ctx).Run();
+                                break;
 
-                        case RunCommand.Migrate:
-                            new MigrateDb(run.Options).Run();
-                            break;
+                            case RunCommand.Migrate:
+                                new MigrateDb(ctx).Run();
+                                break;
 
-                        default:
-                            throw new ArgumentException($"Unknown command: {run.Command}");
+                            default:
+                                throw new ArgumentException($"Unknown command: {run.Command}");
+                        }
                     }
                 }
             }
@@ -68,29 +79,68 @@ namespace DevDB
             return ver.ToString();
         }
 
-        private static RunArgs ParseArguments(IReadOnlyList<string> args)
+        private static RunContext InitializeContext(RunArgs run)
         {
-            if (args == null)
+            // init DB connection
+            var ctx = new RunContext
+            {
+                DbType = run.DbType,
+                Connection = run.Connection
+            };
+
+            if (ctx.Connection != null)
+            {
+                Verbose.WriteLine($"DB type: {ctx.DbType.ToString().ToUpper()}");
+                Verbose.WriteLine($"DB connection: {ctx.Connection}");
+            }
+
+            // choose target path
+            ctx.TargetPath = Environment.CurrentDirectory;
+            if (!String.IsNullOrWhiteSpace(run.CustomPath))
+                ctx.TargetPath = run.CustomPath;
+
+            if (!Directory.Exists(ctx.TargetPath))
+            {
+                XConsole.NewPara().Warning.WriteLine("Cannot locate target path");
+                XConsole.Write("The following target path was not found: ").Cyan.WriteLine(ctx.TargetPath);
+                XConsole.Write("When you use ").Yellow.Write("-p").Default.WriteLine(" parameter to specify custom path, make sure it points to existing location");
+                return null;
+            }
+
+            Verbose.WriteLine($"Target path: {ctx.TargetPath}");
+
+            // get log path
+            ctx.LogPath = Path.Combine(ctx.TargetPath, "log");
+            Verbose.Write($"Log path: {ctx.LogPath}");
+
+            if (!Directory.Exists(ctx.LogPath))
+            {
+                Directory.CreateDirectory(ctx.LogPath);
+                Verbose.Write(" (created)");
+            }
+
+            Verbose.WriteLine();
+
+            // optionally disable prompts
+
+            return ctx;
+        }
+
+        private static RunArgs ParseArguments(IEnumerable<string> arguments)
+        {
+            if (arguments == null)
                 return null;
 
+            var args = arguments.ToList();
             if (args.Count < 1)
                 return null;
 
+            // parse command name
             if (!TryParseEnum<RunCommand>(args[0], out var cmd))
                 return null;
 
-            var run = new RunArgs
-            {
-                Command = cmd,
-                Options = ParseOptions(args.Skip(1).ToList())
-            };
-
-            return run;
-        }
-
-        private static RunOptions ParseOptions(List<string> args)
-        {
-            var options = new RunOptions();
+            var run = new RunArgs { Command = cmd };
+            args.RemoveAt(0);
 
             // read -v separately, since it affects logging
             if (args.Contains("-v"))
@@ -104,9 +154,23 @@ namespace DevDB
             if (db >= 0)
             {
                 Verbose.WriteLine("Parsing DB type...");
-                options.DbType = ParseDbType(args[db + 1]);
+                run.DbType = ParseDbType(args[db + 1]);
             }
 
+            // parse required arguments based on command
+            switch (run.Command)
+            {
+                case RunCommand.Reset:
+                    if (args.Count > 0 && !args[0].StartsWith("-"))
+                    {
+                        Verbose.WriteLine("Parsing connection...");
+                        run.Connection = ParseConnection(run.DbType, args[0]);
+                        args.RemoveAt(0);
+                    }
+                    break;
+            }
+
+            // parse all options
             for (var i = 0; i < args.Count; i++)
             {
                 var arg = args[i];
@@ -119,20 +183,15 @@ namespace DevDB
                         i += 1;
                         continue;
 
-                    case "-c":
-                        Verbose.WriteLine("Parsing connection...");
-                        options.Connection = ParseConnection(options.DbType, args[i + 1]);
-                        i += 1;
-                        continue;
-
                     case "-p":
-                        Verbose.WriteLine("Parsing path...");
-                        options.CustomPath = ParsePath(args[i + 1]);
+                        Verbose.WriteLine("Parsing custom path...");
+                        run.CustomPath = ParsePath(args[i + 1]);
                         i += 1;
                         continue;
 
                     case "-y":
-                        options.AlwaysYes = true;
+                        Prompt.AlwaysYes = true;
+                        Verbose.WriteLine("Prompt will be disabled");
                         continue;
 
                     default:
@@ -141,7 +200,7 @@ namespace DevDB
                 }
             }
 
-            return options;
+            return run;
         }
 
         private static bool TryParseEnum<T>(string arg, out T value)

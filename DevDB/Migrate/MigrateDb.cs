@@ -2,11 +2,11 @@
 {
     public class MigrateDb
     {
-        private readonly RunOptions _options;
+        private readonly RunContext _context;
 
-        public MigrateDb(RunOptions options)
+        public MigrateDb(RunContext context)
         {
-            _options = options;
+            _context = context;
         }
 
         public void Run()

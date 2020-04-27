@@ -1,4 +1,5 @@
-﻿using DevDB.Reset;
+﻿using System.Collections.Generic;
+using DevDB.Reset;
 
 namespace DevDB.Db
 {
@@ -7,6 +8,7 @@ namespace DevDB.Db
         public string ServerName { get; }
         public string DatabaseName { get; }
 
+        public List<string> GetLogFilesToClean();
         public void DropAll();
         public void ExecuteCreation(ResetScript script);
 
