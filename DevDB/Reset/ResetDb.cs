@@ -186,13 +186,16 @@ namespace DevDB.Reset
             }
 
             // display ignored files
-            var ignored = all.FirstOrDefault(i => i.CategoryName == null)?.Files;
-            if (ignored.Count > 0)
+            var ignored = all.FirstOrDefault(i => i.CategoryName == null);
+            if (ignored != null)
             {
-                Verbose.WriteLine($"Ignored {ignored.Count} files:");
-                foreach (var item in ignored)
+                if (ignored.Files.Count > 0)
                 {
-                    Verbose.WriteLine($"- {item.BasePath}");
+                    Verbose.WriteLine($"Ignored {ignored.Files.Count} files:");
+                    foreach (var file in ignored.Files)
+                    {
+                        Verbose.WriteLine($"- {file.BasePath}");
+                    }
                 }
             }
 

@@ -5,8 +5,8 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>devdb</ToolCommandName>
-    <Version>0.2.0</Version>
-    <PackageReleaseNotes>Refactored command arguments and revised update mechanism.</PackageReleaseNotes>
+    <Version>0.2.1</Version>
+    <PackageReleaseNotes>Fixed small bug when displaying ignored files.</PackageReleaseNotes>
     <PackageTags>db, tool, development, version-control, sql, mssql</PackageTags>
     <Description>.NET tool for putting database under version control.
 
