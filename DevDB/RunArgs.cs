@@ -13,8 +13,7 @@ namespace DevDB
     public enum RunCommand
     {
         Reset,
-        Migrate,
-        Update
+        Migrate
     }
 
     public enum DbType

@@ -8,6 +8,7 @@ using System.Reflection;
 using Atom.Util;
 using DevDB.Migrate;
 using DevDB.Reset;
+using DevDB.Update;
 using Npgsql;
 
 namespace DevDB
@@ -43,6 +44,10 @@ namespace DevDB
                     var ctx = InitializeContext(run);
                     if (ctx != null)
                     {
+                        // check if update is required
+                        new UpdateTool(ctx).Run();
+
+                        // run the command
                         switch (run.Command)
                         {
                             case RunCommand.Reset:
@@ -174,7 +179,7 @@ namespace DevDB
             for (var i = 0; i < args.Count; i++)
             {
                 var arg = args[i];
-                switch (arg)
+                switch (arg.ToLower())
                 {
                     case "-v":
                         continue;

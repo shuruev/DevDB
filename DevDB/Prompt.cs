@@ -9,12 +9,9 @@ namespace DevDB
         public static bool YesNo()
         {
             if (AlwaysYes)
-            {
-                Console.Write('y');
                 return true;
-            }
 
-            var key = Console.ReadKey();
+            var key = Console.ReadKey(true);
             return key.Key == ConsoleKey.Y
                 || key.Key == ConsoleKey.D1
                 || key.Key == ConsoleKey.NumPad1;

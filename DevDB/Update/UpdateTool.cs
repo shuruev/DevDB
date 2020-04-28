@@ -1,10 +1,12 @@
 ﻿using System;
 using System.IO;
+using Atom.Util;
 
 namespace DevDB.Update
 {
     public class UpdateTool
     {
+        private const string FILE_NAME = "updated.txt";
         private const int UPDATE_EVERY_DAYS = 5;
 
         private readonly RunContext _context;
@@ -16,19 +18,23 @@ namespace DevDB.Update
 
         public void Run()
         {
-            //xxx
+            XConsole.NewPara();
 
-            // check for updates
-            /*var updated = Path.Combine(_logPath, "updated.txt");
-            if (File.Exists(updated))
+            var updatedFile = Path.Combine(_context.LogPath, FILE_NAME);
+
+            Verbose.WriteLine("Checking if update is needed...");
+            if (File.Exists(updatedFile))
             {
-                var updatedTime = File.GetCreationTimeUtc(updated);
-                if (DateTime.UtcNow.Subtract(updatedTime).TotalDays > UPDATE_EVERY_DAYS)
+                var updatedTime = File.GetCreationTimeUtc(updatedFile);
+                if (DateTime.UtcNow.Subtract(updatedTime).TotalDays < UPDATE_EVERY_DAYS)
                 {
-                    File.Delete(updated);
-                    Verbose.WriteLine("Need to check for updates, use updated.txt to detect");
+                    Verbose.WriteLine("Update is not required");
+                    return;
                 }
-            }*/
+            }
+
+            Verbose.WriteLine($"Update is required, so {FILE_NAME} file will be deleted");
+            File.Delete(updatedFile);
         }
     }
 }

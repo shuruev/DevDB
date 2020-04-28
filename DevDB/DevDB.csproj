@@ -5,12 +5,12 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>devdb</ToolCommandName>
-    <Version>0.1.2</Version>
-    <PackageReleaseNotes>Displaying ignored files on verbose option.</PackageReleaseNotes>
+    <Version>0.2.0</Version>
+    <PackageReleaseNotes>Refactored command arguments and revised update mechanism.</PackageReleaseNotes>
     <PackageTags>db, tool, development, version-control, sql, mssql</PackageTags>
     <Description>.NET tool for putting database under version control.
 
-Install globally or as development dependency to one of your projects, then run as "devdb reset -c ..."
+Install globally or as development dependency to one of your projects, then run as "devdb reset ..."
 
 Check out GitHub for more docs and usage examples.</Description>
     <Authors>Oleg Shuruev</Authors>
@@ -20,7 +20,7 @@ Check out GitHub for more docs and usage examples.</Description>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Atom.XConsole" Version="1.3.2" />
+    <PackageReference Include="Atom.XConsole" Version="1.3.3" />
     <PackageReference Include="Npgsql" Version="4.1.3.1" />
     <PackageReference Include="System.Data.SqlClient" Version="4.8.1" />
   </ItemGroup>
