@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using Atom.Util;
+using DevDB.Db;
 using DevDB.Migrate;
 using DevDB.Reset;
 using DevDB.Update;
@@ -66,6 +67,9 @@ namespace DevDB
             }
             catch (Exception e)
             {
+                if (e is DbExecutorException sqlError)
+                    ReportSqlError(sqlError);
+
                 XConsole.NewPara().Error.WriteLine(e.Message);
                 XConsole.Red.WriteLine(e.ToString());
                 XConsole.PressAnyKeyWhenDebug();
@@ -73,6 +77,26 @@ namespace DevDB
             }
 
             return 0;
+        }
+
+        private static void ReportSqlError(DbExecutorException e)
+        {
+            var lines = e.SqlScript
+                .Replace("\r\n", "\n")
+                .Replace("\r", "\n")
+                .Split('\n');
+
+            var from = Math.Max(e.LineNumber - 5, 0);
+            var to = Math.Min(e.LineNumber + 5, lines.Length - 1);
+
+            XConsole.NewPara();
+            for (var i = from; i <= to; i++)
+            {
+                if (i == e.LineNumber)
+                    XConsole.Error.Write(">>> ").Gold.Write(lines[i]).Error.WriteLine(" <<<");
+                else
+                    XConsole.Gold.WriteLine(lines[i]);
+            }
         }
 
         private static string GetVersion()

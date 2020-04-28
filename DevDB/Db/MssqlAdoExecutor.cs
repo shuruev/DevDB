@@ -24,8 +24,15 @@ namespace DevDB.Db
                 if (String.IsNullOrWhiteSpace(batch))
                     continue;
 
-                using var cmd = NewCommand(conn, batch);
-                cmd.ExecuteNonQuery();
+                try
+                {
+                    using var cmd = NewCommand(conn, batch);
+                    cmd.ExecuteNonQuery();
+                }
+                catch (SqlException e)
+                {
+                    throw new DbExecutorException($"SQL error: {e.Message}", batch, e.LineNumber - 1, e);
+                }
             }
         }
 

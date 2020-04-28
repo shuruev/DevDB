@@ -5,8 +5,8 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>devdb</ToolCommandName>
-    <Version>0.2.2</Version>
-    <PackageReleaseNotes>Tool will never block output with "Press any key...", even if error occurred.</PackageReleaseNotes>
+    <Version>0.2.3</Version>
+    <PackageReleaseNotes>Added more detailed output for SQL errors.</PackageReleaseNotes>
     <PackageTags>db, tool, development, version-control, sql, mssql</PackageTags>
     <Description>.NET tool for putting database under version control.
 
