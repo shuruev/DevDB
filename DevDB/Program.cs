@@ -68,7 +68,7 @@ namespace DevDB
             {
                 XConsole.NewPara().Error.WriteLine(e.Message);
                 XConsole.Red.WriteLine(e.ToString());
-                XConsole.PressAnyKey();
+                XConsole.PressAnyKeyWhenDebug();
                 return -1;
             }
 
