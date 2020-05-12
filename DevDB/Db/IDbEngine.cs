@@ -9,8 +9,8 @@ namespace DevDB.Db
         public string DatabaseName { get; }
 
         public List<string> GetLogFilesToClean();
-        public void DropAll();
-        public void ExecuteCreation(ResetScript script);
+        public void DropAll(bool softReset);
+        public void ExecuteCreation(ResetScript script, bool softReset);
 
         public int GetTableCount();
         public int GetProcedureCount();

@@ -32,11 +32,21 @@ namespace DevDB.Db
                 .ToList();
         }
 
-        public void DropAll() => ExecuteAndLog("Drop_All.sql", Scripts.Mssql.DropAll);
-
-        public void ExecuteCreation(ResetScript script)
+        public void DropAll(bool softReset)
         {
-            var all = Path.Combine(_logPath, "Create_All.sql");
+            if (softReset)
+            {
+                ExecuteAndLog("Drop_Soft.sql", Scripts.Mssql.DropSoft);
+            }
+            else
+            {
+                ExecuteAndLog("Drop_All.sql", Scripts.Mssql.DropAll);
+            }
+        }
+
+        public void ExecuteCreation(ResetScript script, bool softReset)
+        {
+            var all = Path.Combine(_logPath, softReset ? "Create_Soft.sql" : "Create_All.sql");
 
             var sb = new StringBuilder();
             foreach (var file in script.Files)

@@ -7,6 +7,7 @@ namespace DevDB.Reset
     public static class KnownScripts
     {
         private const string INIT = "Initial";
+        private const string TYPES = "Types";
         private const string TABLES = "Tables";
         private const string VIEWS = "Views";
         private const string FUNCTIONS = "Functions";
@@ -18,13 +19,14 @@ namespace DevDB.Reset
         private static readonly Dictionary<string, int> _order = new Dictionary<string, int>
         {
             { INIT, 1 },
-            { TABLES, 2 },
-            { VIEWS, 3 },
-            { FUNCTIONS, 4 },
-            { PROCEDURES, 5 },
-            { SECURITY, 6 },
-            { OTHER, 7 },
-            { DATA, 8 }
+            { TYPES, 2 },
+            { TABLES, 3 },
+            { VIEWS, 4 },
+            { FUNCTIONS, 5 },
+            { PROCEDURES, 6 },
+            { SECURITY, 7 },
+            { OTHER, 8 },
+            { DATA, 9 }
         };
 
         private static readonly Dictionary<string, string> _aliases = new Dictionary<string, string>
@@ -34,6 +36,9 @@ namespace DevDB.Reset
             { "initial", INIT },
             { "initialize", INIT },
             { "setup", INIT },
+            { "typ", TYPES },
+            { "type", TYPES },
+            { "types", TYPES },
             { "tb", TABLES },
             { "tab", TABLES },
             { "tbl", TABLES },
@@ -63,7 +68,9 @@ namespace DevDB.Reset
             { "security", SECURITY },
             { "oth", OTHER },
             { "other", OTHER },
+            { "post", OTHER },
             { "data", DATA },
+            { "seed", DATA },
             { "seeding", DATA }
         };
 
@@ -87,6 +94,21 @@ namespace DevDB.Reset
         public static int GetCategoryOrder(string categoryName)
         {
             return _order[categoryName];
+        }
+
+        public static bool UsedWhenSoftReset(string categoryName)
+        {
+            switch (categoryName)
+            {
+                case TYPES:
+                case VIEWS:
+                case FUNCTIONS:
+                case PROCEDURES:
+                    return true;
+
+                default:
+                    return false;
+            }
         }
     }
 }

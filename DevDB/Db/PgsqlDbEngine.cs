@@ -27,12 +27,12 @@ namespace DevDB.Db
             throw new NotImplementedException();
         }
 
-        public void DropAll()
+        public void DropAll(bool softReset)
         {
             throw new NotImplementedException();
         }
 
-        public void ExecuteCreation(ResetScript script)
+        public void ExecuteCreation(ResetScript script, bool softReset)
         {
             throw new NotImplementedException();
         }

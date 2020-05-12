@@ -9,6 +9,7 @@ namespace DevDB
         public static class Mssql
         {
             public static string DropAll => GetScript("Mssql.DropAll.sql");
+            public static string DropSoft => GetScript("Mssql.DropSoft.sql");
             public static string GetTableCount => GetScript("Mssql.GetTableCount.sql");
             public static string GetProcedureCount => GetScript("Mssql.GetProcedureCount.sql");
         }

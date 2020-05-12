@@ -36,6 +36,9 @@ namespace DevDB
                     XConsole.NewPara().WriteLine("Options:")
                         .WriteLine("  -db <DB_TYPE>      Specifies DB engine type: 'mssql' or 'pgsql' (default is 'mssql')")
                         .WriteLine("  -p <TARGET_PATH>   Specifies custom target path (current folder will be used by default)")
+                        .WriteLine("  -s                 Performs \"soft\" reset by dropping and recreating only procedures, types, functions, and views.")
+                        .WriteLine("                     Does not reset tables, schemas, users, roles, etc. or anything related to modifying the data.")
+                        .WriteLine("                     Applies only to 'reset' command.")
                         .WriteLine("  -y                 Automatically submits 'yes' to all Y/N prompts")
                         .WriteLine("  -v                 Enables verbose output");
                 }
@@ -150,7 +153,8 @@ namespace DevDB
 
             Verbose.WriteLine();
 
-            // optionally disable prompts
+            // optionally use "soft" reset
+            ctx.UseSoftReset = run.UseSoftReset;
 
             return ctx;
         }
@@ -216,6 +220,11 @@ namespace DevDB
                         Verbose.WriteLine("Parsing custom path...");
                         run.CustomPath = ParsePath(args[i + 1]);
                         i += 1;
+                        continue;
+
+                    case "-s":
+                        Verbose.WriteLine("\"Soft\" reset will be performed instead of a regular one");
+                        run.UseSoftReset = true;
                         continue;
 
                     case "-y":

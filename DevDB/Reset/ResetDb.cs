@@ -44,7 +44,7 @@ namespace DevDB.Reset
 
             // run scripts
             XConsole.NewPara();
-            Execute("Drop all objects...", () => engine.DropAll());
+            Execute("Drop all objects...", () => engine.DropAll(_context.UseSoftReset));
 
             foreach (var script in scripts)
             {
@@ -52,7 +52,15 @@ namespace DevDB.Reset
                 foreach (var file in script.Files)
                     Verbose.WriteLine($"{script.CategoryName.ToUpper()} : {file.BasePath}");
 
-                Execute($"Creating {script.CategoryName.ToLower()}...", () => engine.ExecuteCreation(script));
+                if (_context.UseSoftReset && !KnownScripts.UsedWhenSoftReset(script.CategoryName))
+                {
+                    XConsole.Write($"Creating {script.CategoryName.ToLower()}... ").Gold.Write("Skipped");
+                    Verbose.Write(" (due to \"soft\" reset)");
+                    XConsole.WriteLine();
+                    continue;
+                }
+
+                Execute($"Creating {script.CategoryName.ToLower()}... ", () => engine.ExecuteCreation(script, _context.UseSoftReset));
             }
 
             sw.Stop();
@@ -100,10 +108,19 @@ namespace DevDB.Reset
             return true;
         }
 
-        private static bool Proceed(IDbEngine engine)
+        private bool Proceed(IDbEngine engine)
         {
-            XConsole.NewPara().Write("Performing reset for ").Cyan.Write(engine.DatabaseName).Default.Write(" database at ").Cyan.WriteLine(engine.ServerName);
-            XConsole.Write("This will ").Error.Write("*** ERASE ***").Default.Write(" your local DB and recreate it from scripts. You sure (Y/N)? ");
+            if (_context.UseSoftReset)
+            {
+                XConsole.NewPara().Write("Performing ").Gold.Write("\"soft\"").Default.Write(" reset for ").Cyan.Write(engine.DatabaseName).Default.Write(" database at ").Cyan.WriteLine(engine.ServerName);
+                XConsole.Write("This will ").Warning.Write("*** ERASE ***").Default.WriteLine(" only programmatic objects (procedures, functions, views, etc.) in your DB and will attempt to");
+                XConsole.Write("recreate them from scripts. You sure (Y/N)? ");
+            }
+            else
+            {
+                XConsole.NewPara().Write("Performing reset for ").Cyan.Write(engine.DatabaseName).Default.Write(" database at ").Cyan.WriteLine(engine.ServerName);
+                XConsole.Write("This will ").Error.Write("*** ERASE ***").Default.Write(" your DB and recreate it from scripts. You sure (Y/N)? ");
+            }
 
             var proceed = Prompt.YesNo();
             if (!proceed)
