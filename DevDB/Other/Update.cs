@@ -2,16 +2,16 @@
 using System.IO;
 using Atom.Util;
 
-namespace DevDB.Update
+namespace DevDB.Other
 {
-    public class UpdateTool
+    public class Update
     {
         private const string FILE_NAME = "updated.txt";
         private const int UPDATE_EVERY_DAYS = 5;
 
         private readonly RunContext _context;
 
-        public UpdateTool(RunContext context)
+        public Update(RunContext context)
         {
             _context = context;
         }

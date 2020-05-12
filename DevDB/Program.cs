@@ -8,8 +8,8 @@ using System.Reflection;
 using Atom.Util;
 using DevDB.Db;
 using DevDB.Migrate;
+using DevDB.Other;
 using DevDB.Reset;
-using DevDB.Update;
 using Npgsql;
 
 namespace DevDB
@@ -31,7 +31,8 @@ namespace DevDB
                 {
                     XConsole.WriteLine("Usage:")
                         .Write("  devdb ").Yellow.Write("reset").Default.WriteLine(" <CONNECTION_STRING> [options]     Resets specified DB and recreates it from scripts")
-                        .Write("  devdb ").Yellow.Write("migrate").Default.WriteLine(" <CONNECTION_STRING> [options]   Applies all available migrations to specified DB");
+                        .Write("  devdb ").Yellow.Write("migrate").Default.WriteLine(" <CONNECTION_STRING> [options]   Applies all available migrations to specified DB")
+                        .Write("  devdb ").Yellow.Write("help").Default.WriteLine("                                    Opens GitHub URL with detailed help");
 
                     XConsole.NewPara().WriteLine("Options:")
                         .WriteLine("  -db <DB_TYPE>      Specifies DB engine type: 'mssql' or 'pgsql' (default is 'mssql')")
@@ -49,7 +50,7 @@ namespace DevDB
                     if (ctx != null)
                     {
                         // check if update is required
-                        new UpdateTool(ctx).Run();
+                        new Update(ctx).Run();
 
                         // run the command
                         switch (run.Command)
@@ -60,6 +61,10 @@ namespace DevDB
 
                             case RunCommand.Migrate:
                                 new MigrateDb(ctx).Run();
+                                break;
+
+                            case RunCommand.Help:
+                                new Help().Run();
                                 break;
 
                             default:
