@@ -27,8 +27,8 @@ namespace DevDB.Db
         public List<string> GetLogFilesToClean()
         {
             return Directory.GetFiles(_logPath, "*.sql")
-                .Where(f => Path.GetFileName(f).StartsWith("Drop_"))
-                .Where(f => Path.GetFileName(f).StartsWith("Create_"))
+                .Where(f => Path.GetFileName(f).StartsWith("Drop_")
+                    || Path.GetFileName(f).StartsWith("Create_"))
                 .ToList();
         }
 
