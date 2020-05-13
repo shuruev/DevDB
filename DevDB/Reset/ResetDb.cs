@@ -44,7 +44,7 @@ namespace DevDB.Reset
 
             // run scripts
             XConsole.NewPara();
-            Execute("Drop all objects...", () => engine.DropAll(_context.UseSoftReset));
+            Execute($"Drop {(_context.UseSoftReset ? "only programmatic" : "all")} objects...", () => engine.DropAll(_context.UseSoftReset));
 
             foreach (var script in scripts)
             {
@@ -60,7 +60,7 @@ namespace DevDB.Reset
                     continue;
                 }
 
-                Execute($"Creating {script.CategoryName.ToLower()}... ", () => engine.ExecuteCreation(script, _context.UseSoftReset));
+                Execute($"Creating {script.CategoryName.ToLower()}...", () => engine.ExecuteCreation(script, _context.UseSoftReset));
             }
 
             sw.Stop();
