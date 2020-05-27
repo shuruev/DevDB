@@ -5,8 +5,8 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>devdb</ToolCommandName>
-    <Version>0.3.2</Version>
-    <PackageReleaseNotes>Small wording adjustments.</PackageReleaseNotes>
+    <Version>0.4.0</Version>
+    <PackageReleaseNotes>DevDB will never delete database users.</PackageReleaseNotes>
     <PackageTags>db, tool, development, version-control, sql, mssql</PackageTags>
     <Description>.NET tool for putting database under version control.
 
