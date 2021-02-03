@@ -70,6 +70,9 @@ namespace DevDB.Reset
             { "other", OTHER },
             { "post", OTHER },
             { "data", DATA },
+            { "dic", DATA },
+            { "dictionary", DATA },
+            { "dictionaries", DATA },
             { "seed", DATA },
             { "seeding", DATA }
         };

@@ -1,17 +1,21 @@
 ﻿DECLARE @sql NVARCHAR(2000)
 
 --------------------------------------------------
--- Drop all views
+-- Drop all views, except those related to built-in tools (like e.g. sys.database_firewall_rules, sys.event_log, etc.)
 --------------------------------------------------
 WHILE EXISTS (
 	SELECT *
 	FROM sys.views V
+	WHERE
+		V.is_ms_shipped = 0
 )
 BEGIN
 	SELECT TOP 1 @sql = 'DROP VIEW [' + S.[name] + '].[' + V.[name] + ']'
 	FROM sys.views V
 		INNER JOIN sys.schemas S
 		ON V.[schema_id] = S.[schema_id]
+	WHERE
+		V.is_ms_shipped = 0
 
 	EXECUTE sp_executesql @sql
 END
